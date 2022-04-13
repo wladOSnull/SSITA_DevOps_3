@@ -99,17 +99,6 @@ Guide for building a project by *Maven* and deploy to *Nexus* with using special
   - video 2 -> [youtube](https://www.youtube.com/watch?v=iegXZUGVkL8)
   - video 3 -> [youtube](https://www.youtube.com/watch?v=Unsa7Ax6kQA)
 
-## Pipelines
-
-1. AWX Geo Citizen (full) - manual, ONLY configuring VMs by AWX
-2. Terraform Geo Citizen - manual, ONLY apply/destroy VMs
-
-3. Workflow Geo Citizen - URL trigger, full creating-configuring infrastructure (+ trigger next build)
-
-4. GitHub-Nexus-Geo-Citizen - webhook trigger (on Geocit134 and Jenkins-Geo-Citizen) + trigger after 'Workflow Geo Citizen', from push on GitHub to artefact on Nexus (+ trigger next build)
-
-5. Tomcat-Geo-Citizen - trigger after 'GitHub-Nexus-Geo-Citizen', push artefact from Nexus to Tomcat server
-
 ## GCP load balancing
 
 ### Manual
@@ -186,6 +175,236 @@ Command fot parsing the latest *citizen* (Docker image) tag:
   ~ curl --user "user:pass" -sX GET http://ip:port/v2/citizen/tags/list | jq '.tags[-1]' | awk -F[\"\"] '{print $2}'
   ```
 
+## Prometheus
+
+Main guide to install *Prometheus* on premise -> [fosslinux](https://www.fosslinux.com/10398/how-to-install-and-configure-prometheus-on-centos-7.htm)
+
+**TIP**: disabling of *SELinux* is necessarily !!! Otherwise *prometheus.service* won't start. Also, disabling *SELinux* is a very bad approach to managing Linux OS, so maybe you need to use Docker image version of *Prometheus* ...
+
+Dashboard for Prometheus node_exporter -> [grafana](https://grafana.com/grafana/dashboards/1860)
+
+Dynamic 'hosts' file (prometheus.yml):
+
+- example of correct file -> [github](https://github.com/prometheus/prometheus/blob/release-2.34/config/testdata/conf.good.yml)
+- manual with types of dynamic configs -> [prometheus](https://prometheus.io/docs/prometheus/latest/configuration/configuration/#file_sd_config)
+
+## Grafana
+
+Main guide to installing *Grafana* (Enterprise edition) -> [grafana](https://grafana.com/docs/grafana/latest/installation/rpm/)
+
+## Grafana + Prometheus
+
+Guide for establishing connection *Grafana* with *Prometheus* -> [linuxhint](https://linuxhint.com/connect-grafana-with-prometheus/)
+
+## SensuGO
+
+Main guide for installation -> [computingforgeeks](https://computingforgeeks.com/install-sensu-monitoring-tool-on-centos-linux/)  
+
+Installation of *SensuGO* was made on instance with *Jenkins, Prometheus, Grafana ...*, so default config file 'backend.yaml' of *SensuGo* must be changed due to ports conflicts:
+
+  ```md
+  # change all configs to these ports
+
+  - api-listen-address: "[::]:8090" 
+  - api-url: "http://localhost:8090"
+  - agent-port: 8091
+  - dashboard-port: 3010
+  ```
+
+Visit *SensuGo* on http://ip:dashboard-port, input login/pass from *sensu-backend init* command. Also you can check *SensuGO* healthby:
+
+  ```bash
+  # default port is 8080 but in our case 8090
+  ~ curl http://127.0.0.1:8090/health
+  ```
+
+Install *sensu-go-cli*:
+
+  ```bash
+  # installation
+  ~ sudo yum install sensu-go-cli
+
+  # configure/init
+  ~ sensuctl configure
+  ```
+
+Install *sensu-go-agent*  :
+
+  ```bash
+  # installation
+  ~ sudo yum install sensu-go-agent
+
+  # get deafault config  file (like for sensu-go-backend)
+  ~ sudo curl -L https://docs.sensu.io/sensu-go/latest/files/agent.yml -o /etc/sensu/agent.yml
+  ```
+
+Due to changes in 'backend.yml' for sensu backend we have to change 'agent.yml' also:
+
+  ```md
+  # uncomment this !
+  - backend-url:
+  # change this as 'agent-port' in backend.yml
+  - "ws://127.0.0.1:8091"
+  ```
+
+Start sertvice unit of *sensu-agent* as well:
+
+  ```bash
+  ~ sudo systemctl enable --now sensu-agent
+  ```
+
+Check status of *sensu-agent* service. 
+
+**TIP**: if *sensu-agent* service failed to start:
+
+  - check ports in configs files (backend.yml and agent.yml) - if you changed them of course ...
+  - check owner (must be 'sensu' user, he was created automatically) of folder and content for:
+    - backend - /var/cache/sensu/sensu-backend/
+    - agent - /var/cache/sensu/sensu-agent/
+
+... then try to restart unit and check again.
+
+When all services are installed (backend+WEB, cli, agent), visit web console again and check some info:
+
+  - Main menu - Dasboard
+  - Main menu - Select name - select 'default' (as setted in backend configs) - Entitites - select 'your entity name (hostname + OS name)' - select 'keepalive'
+
+For runnig dockerized *sensu-agent*:
+
+  ```bash
+  # this image contain backend and agent
+  ~ docker pull surian/sensu-go:latest
+
+  # run only agent with backend parameter
+  ~ docker run surian/sensu-go:latest \
+    sensu-agent start \
+    --backend-url ws://35.226.240.92:8091
+  ```
+
+If all ports are specified ports are open - check new entity in *SensuGO* web console.
+
+## Grafana + SensuGO
+
+Main installation guide -> [sensu](https://sensu.io/blog/visualizing-sensu-go-data-in-grafana):
+
+  - check the latest release here -> [github](https://github.com/sensu/grafana-sensu-go-datasource/)
+
+**TIP**: due to old state of this plugin, *Grafana* won't load this plugin - 'sens-sensugo-datasource' isn't signed !
+  - after installation find conf file of *Grafana* 'default.ini' (in this case /usr/share/grafana/conf/defaults.ini)
+  - change the key 'allow_loading_unsigned_plugins'
+
+    ```ini
+    # append name of installed SensuGO plugin to =
+    allow_loading_unsigned_plugins = sensu-sensugo-datasource
+    ```
+
+  - restart *Grafana* unit
+
+  - check list of 'data sources' on *Grafana* dashboard, there must appear 'Sensu Go' with *unsigned* label (in my case in the bottom of the list)
+
+... info about this and the other keys in 'default.ini' -> [grafana](https://grafana.com/docs/grafana/latest/administration/configuration/#allow_loading_unsigned_plugins)
+
+This repository contain sample dashboards for *SensuGO* also -> [github](https://github.com/sensu/grafana-sensu-go-datasource/tree/master/sample-dashboards):
+
+  - some sample dashboards use old version of 'pie-chart' -> [grafana](https://grafana.com/grafana/plugins/grafana-piechart-panel/?tab=installation)
+  - this chart can be installed from Grafana - Configuration - Plugins - serch 'pie' - one chart is already installed (new), choose the other (old) and install
+
+## GO
+
+First test + first app -> [digitalocean](https://www.digitalocean.com/community/tutorials/how-to-write-unit-tests-in-go-using-go-test-and-the-testing-package)
+
+GO marathon -> [github]([github]
+https://github.com/GolangUA/workshops/tree/master/easy-cystom-json-parsing
+)
+
+GO core course on SSITA ...
+
+## Supervisorctl
+
+Use Supervisor with Dockerfiles -> 
+  
+  - [gdevillele](https://gdevillele.github.io/engine/admin/using_supervisord/)
+
+  - [advancedweb](https://advancedweb.hu/supervisor-with-docker-lessons-learned/)
+
+Configuring Tomcat under Supervisor -> [programmer](https://programmer.group/supervisor-s-installation-and-management-of-tomcat-process-under-centos7.html)
+
+Configuring *tzdata* and time zones (for some servers) by Dockerfile -> [rtfm](https://rtfm.co.ua/en/docker-configure-tzdata-and-timezone-during-build/)
+
+### Commands
+
+Main commands for building and managing Geo Citizen Docker image:
+
+- for **ubuntu** based:
+
+  ```bash
+  # build Docker image
+  ~ DOCKER_BUILDKIT=1 BUILDKIT_PROGRESS=plain docker build -t geo-supervisor .
+  # run dockerized Geo Citizen infrastructure
+  ~ docker run -d -p 80:8080 -p 9000:80 -p 9005:5432 -p 9999:9001 geo-supervisor
+  # interaction with Geo Citizen container
+  ~ docker exec -it ??? bash
+  ```
+
+- for **alpine** based:
+
+  ```bash
+  # build Docker image; add 'BUILDKIT_PROGRESS=plain' for full logs
+  ~ time DOCKER_BUILDKIT=1 docker build -t geo-alpine-supervisor .
+  # create volume for PostgreSQL
+  ~ docker volume create geovolume
+  # run dockerized Geo Citizen infrastructure:
+  # - first -p: for Tomcat
+  # - second -p: for Supervisor web interface
+  ~ docker run -d -p 80:8080 -p 9999:9001 geo-alpine-supervisor
+  ~ docker run -d -p 80:8080 -p 9999:9001 --mount source=geovolume,destination=/var/lib/postgresql/data geo-alpine-supervisor
+  # interaction with Geo Citizen container
+  ~ docker exec -it ??? bash
+  ```  
+
+- for Docker volume:
+
+  ```bash
+  ~ docker volume create geovolume
+  ~ docker volume list
+  ~ docker run -it --mount source=test,destination=/var/lib/postgresql/data alpine
+  ```
+
+Additional commands: 
+
+  ```bash
+  # check size of running container 
+  ~ docker container ls -s
+
+  # check info about certain image
+  ~ docker images geo-alpine-supervisor
+
+  # deply Geo Citizen .war in running container
+  ~ docker cp ./citizen.war ???:/opt/tomcat/latest/webapps/citizen.war
+
+  # copy to/from docker container
+  ~ docker cp foo.txt container_id:/foo.txt
+  ~ docker cp container_id:/foo.txt foo.txt
+  
+  # PostgreSQL has own CLI with start/stop/restart ... options !
+  ~ /etc/init.d/postgresql restart
+
+  # connect to PostgreSQL remotelly
+  ~ psql -h 35.226.240.92 -p 9005 -d postgres -U postgres -W
+
+  # exporting Java variable for mvn
+  ~ export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-11.0.14.1.1-2.el8_5.x86_64
+  ```
+
+### Web interface
+
+Web interface of Supervisord is configured in */etc/supervisord/supervisord.conf* by '[inet_http_server]' block. Then you can visit the page by http://public-ip-of-vm:port -> http://35.226.240.92:9999/ (in my case)
+
+
+## ELK stack
+
+Main guide to install -> [phoenixnap](https://phoenixnap.com/kb/install-elk-stack-centos-8)
+
 ## Appendix
 
 ### Nexus
@@ -197,6 +416,8 @@ List of disks/file system type/mount point on system:
   ```
 
 Jenkins publishes artefacts to Nexus -> [appfleet](https://appfleet.com/blog/publishing-artifacts-to-nexus-using-jenkins-pipelines/#:~:text=To%20create%20a%20new%20user,%2C%20it%20is%20jenkins%2Duser%20.)
+
+If you are run out of space, delete some artefacts (manually/API/policy) -> this ONLY MARK these assets as *deleted*. If you want to free up space *literally* - create new *Task* with type *Compact blob store* with manual *Task frequency* and run this task. This task would delete all assets marked as *deleted*. Check logs if there are no errors and space info. 
 
 ### Maven
 
