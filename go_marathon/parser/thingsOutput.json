@@ -1,0 +1,44 @@
+{
+	"things": [
+		{
+			"persons": [
+				{
+					"name": "Albert",
+					"age": 3
+				},
+				{
+					"name": "Roman",
+					"age": 32
+				},
+				{
+					"name": "Bob",
+					"age": 36
+				},
+				{
+					"name": "Alice",
+					"age": 37
+				}
+			]
+		},
+		{
+			"places": [
+				{
+					"city": "Ipoh",
+					"country": "Malaysia"
+				},
+				{
+					"city": "Dnipro",
+					"country": "Ukraine"
+				},
+				{
+					"city": "Northampton",
+					"country": "England"
+				},
+				{
+					"city": "New York City",
+					"country": "US"
+				}
+			]
+		}
+	]
+}

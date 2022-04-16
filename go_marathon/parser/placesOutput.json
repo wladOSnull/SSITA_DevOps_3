@@ -1,0 +1,20 @@
+{
+	"places": [
+		{
+			"city": "Ipoh",
+			"country": "Malaysia"
+		},
+		{
+			"city": "Dnipro",
+			"country": "Ukraine"
+		},
+		{
+			"city": "Northampton",
+			"country": "England"
+		},
+		{
+			"city": "New York City",
+			"country": "US"
+		}
+	]
+}

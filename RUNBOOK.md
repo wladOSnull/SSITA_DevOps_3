@@ -405,6 +405,31 @@ Web interface of Supervisord is configured in */etc/supervisord/supervisord.conf
 
 Main guide to install -> [phoenixnap](https://phoenixnap.com/kb/install-elk-stack-centos-8)
 
+On main VM we have ELK 3 tools:
+
+  ```bash
+  ~ sudo systemctl status elasticsearch.service
+  ~ sudo systemctl status kibana.service
+  ~ sudo systemctl status logstash.service
+  ```
+
+Additional tools are agent services, they cane be installed on the same VM or other:
+
+  ```bash
+  ~ sudo systemctl status filebeat.service
+  ~ sudo systemctl status metricbeat.service
+  ```
+
+Access to Kibana web interface on 5601 port.
+
+## GitLab
+
+Install GitLab on instance -> [gitlab](https://about.gitlab.com/install/#ubuntu)
+
+Enable SSL for GitLab instance -> (tecadmin)[https://tecadmin.net/secure-gitlab-with-lets-encrypt-ssl/]
+
+Create 'dind' executor for build Docker images -> [gitlab](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
+
 ## Appendix
 
 ### Nexus
