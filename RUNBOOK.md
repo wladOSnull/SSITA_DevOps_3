@@ -211,7 +211,7 @@ Installation of *SensuGO* was made on instance with *Jenkins, Prometheus, Grafan
   - dashboard-port: 3010
   ```
 
-Visit *SensuGo* on http://ip:dashboard-port, input login/pass from *sensu-backend init* command. Also you can check *SensuGO* healthby:
+Visit *SensuGo* on http://ip:dashboard-port, input login/pass from *sensu-backend init* command. Also you can check *SensuGO* health by:
 
   ```bash
   # default port is 8080 but in our case 8090
@@ -430,6 +430,16 @@ Enable SSL for GitLab instance -> (tecadmin)[https://tecadmin.net/secure-gitlab-
 
 Create 'dind' executor for build Docker images -> [gitlab](https://docs.gitlab.com/ee/ci/docker/using_docker_build.html)
 
+## No-IP
+
+Register on -> [noip](https://www.noip.com/)
+
+Create desired hostname -> [hostname](https://my.noip.com/dynamic-dns)
+
+Install/configure DUC agent for DDNS -> [DUC](https://my.noip.com/dynamic-dns/duc)
+
+Configure deamon unit for DUC -> [askubuntu](https://askubuntu.com/questions/1089704/cant-get-service-noip2-to-start-on-boot)
+
 ## Appendix
 
 ### Nexus
@@ -548,3 +558,13 @@ Generic Webhook Trigger:
     -H "Content-Type: application/json" \
     -d "{'host': $(hostname), 'label': 'test'}" \
     https://name.hooks.webhookrelay.com/invoke?token=tester
+
+ELK stack + agents:
+
+  bash```
+  ~ sudo systemctl start elasticsearch.service &&
+    sudo systemctl start logstash.service &&
+    sudo systemctl start kibana.service &&
+    sudo systemctl start filebeat.service &&
+    sudo systemctl start metricbeat.service
+  ```
